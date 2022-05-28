@@ -1,11 +1,5 @@
 TARGET := glfft_cli
-
-BACKEND := glfw
-
-EXTERNAL_INCLUDE_DIRS := -ImuFFT -I. -Itest -Itest/$(BACKEND)
-EXTERNAL_LIB_DIRS := -LmuFFT
-EXTERNAL_LIBS := -lmufft
-MUFFT_LIB := muFFT/libmufft.a
+EXTERNAL_INCLUDE_DIRS := -I. -Itest -Itest/glfw
 
 ifeq ($(PLATFORM),)
 	PLATFORM = unix
@@ -20,18 +14,16 @@ ifeq ($(PLATFORM),)
 	endif
 endif
 
-ifeq ($(BACKEND), glfw)
-	ifeq ($(PLATFORM),win)
-		LDFLAGS += -Lexternal/lib/win-x64 -lglfw3 -lopengl32 -lgdi32
-		EXTERNAL_INCLUDE_DIRS += -Iexternal/include
-	else
-		LDFLAGS += -lmufft $(shell pkg-config glfw3 --libs) -lGL
-	endif
-	GLSYM := test/glfw/glsym/rglgen.c test/glfw/glsym/glsym_gl.c
-
-	CXX = clang++
-	CC = clang
+ifeq ($(PLATFORM),win)
+	LDFLAGS += -Lexternal/lib/win-x64 -lglfw3 -lopengl32 -lgdi32
+	EXTERNAL_INCLUDE_DIRS += -Iexternal/include
+else
+	LDFLAGS += $(shell pkg-config glfw3 --libs) -lGL
 endif
+GLSYM := test/glfw/glsym/rglgen.c test/glfw/glsym/glsym_gl.c
+
+CXX = clang++
+CC = clang
 
 ifeq ($(PLATFORM),win)
 	CC = gcc
@@ -55,44 +47,18 @@ ifneq ($(TOOLCHAIN_PREFIX),)
 	CXX = $(TOOLCHAIN_PREFIX)g++
 endif
 
-GLSLANG_YACC := glslang/glslang/MachineIndependent/glslang.y
-GLSLANG_YACC_TAB := glslang/glslang_tab.cpp
-GLSLANG_YACC_TAB_INCLUDE := glslang/glslang_tab.cpp.h
-GLSLANG_SOURCES := \
-	$(wildcard glslang/SPIRV/*.cpp) \
-	$(wildcard glslang/glslang/GenericCodeGen/*.cpp) \
-	$(wildcard glslang/OGLCompilersDLL/*.cpp) \
-	$(wildcard glslang/glslang/MachineIndependent/*.cpp) \
-	$(wildcard glslang/glslang/MachineIndependent/preprocessor/*.cpp) \
-	$(wildcard glslang/glslang/OSDependent/Linux/*.cpp) \
-	$(GLSLANG_YACC_TAB)
-
-GLSLANG_OBJECTS := $(GLSLANG_SOURCES:.cpp=.o)
-GLSLANG_LIB := libglslang.a
-CXXFLAGS += -Iglslang/glslang/OSDependent/Linux \
-			-Iglslang \
-			-Iglslang/glslang/MachineIndependent \
-			-Iglslang/glslang/Public \
-			-Iglslang/SPIRV
-
 LDFLAGS += -pthread
 
-all: $(GLSLANG_YACC_TAB) build_fft_inc
+all: build_fft_inc
 	@+$(MAKE) $(TARGET)
 
-$(GLSLANG_LIB): $(GLSLANG_OBJECTS)
-	$(AR) rcs $@ $(GLSLANG_OBJECTS)
-
-$(GLSLANG_YACC_TAB): $(GLSLANG_YACC)
-	bison --defines=$(GLSLANG_YACC_TAB_INCLUDE) -t $(GLSLANG_YACC) -o $(GLSLANG_YACC_TAB)
-
-CXX_SOURCES := $(wildcard *.cpp) $(wildcard test/*.cpp) $(wildcard test/$(BACKEND)/*.cpp)
+CXX_SOURCES := $(wildcard *.cpp) $(wildcard test/*.cpp) $(wildcard test/glfw/*.cpp)
 C_SOURCES := $(GLSYM)
 OBJDIR := obj
 OBJECTS := $(addprefix $(OBJDIR)/,$(CXX_SOURCES:.cpp=.o)) $(addprefix $(OBJDIR)/,$(C_SOURCES:.c=.o))
 DEPS := $(OBJECTS:.o=.d)
 
-CXXFLAGS += -Wall -Wextra -pedantic -std=c++11 $(EXTERNAL_INCLUDE_DIRS) -DGLFFT_SERIALIZATION
+CXXFLAGS += -Wall -Wextra -pedantic -std=c++11 $(EXTERNAL_INCLUDE_DIRS)
 CFLAGS += -Wall -Wextra -std=c99 $(EXTERNAL_INCLUDE_DIRS)
 LDFLAGS += $(EXTERNAL_LIB_DIRS) -lm
 
@@ -101,11 +67,8 @@ build_fft_inc:
 
 -include $(DEPS)
 
-muFFT/libmufft.a:
-	$(MAKE) -C muFFT static PLATFORM=$(PLATFORM) TOOLCHAIN_PREFIX=$(TOOLCHAIN_PREFIX)
-
-$(TARGET): $(OBJECTS) $(MUFFT_LIB) $(GLSLANG_LIB)
-	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS) $(EXTERNAL_LIBS) $(GLSLANG_LIB)
+$(TARGET): $(OBJECTS)
+	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS) $(EXTERNAL_LIBS)
 
 $(OBJDIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
@@ -117,11 +80,6 @@ $(OBJDIR)/%.o: %.c
 
 clean:
 	rm -rf $(OBJDIR) $(TARGET)
-	$(MAKE) -C muFFT clean PLATFORM=$(PLATFORM)
 	$(MAKE) -C glsl clean
-	rm -f muFFT/libmufft.a
-	rm -f $(GLSLANG_LIB)
-	rm -f $(GLSLANG_YACC_TAB)
-	rm -f $(GLSLANG_YACC_TAB_INCLUDE)
 
 .PHONY: clean

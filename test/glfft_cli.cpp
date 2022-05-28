@@ -302,55 +302,8 @@ static void run_benchmark(Context *context, const BenchArguments &args)
 
 static void cli_help(Context *context, char *argv[])
 {
-    context->log("Usage: %s [test | bench | help] (args...)\n", argv[0]);
-    context->log("       For help on various subsystems, e.g. %s test help\n", argv[0]);
-}
-
-static void cli_test_help(Context *context)
-{
-    context->log("Usage: test [--test testid] [--test-all] [--test-range testidmin testidmax] [--exit-on-fail] [--minimum-snr-fp16 value-db] [--maximum-snr-fp32 value-db] [--epsilon-fp16 value] [--epsilon-fp32 value]\n"
-              "       --test testid: Run a specific test, indexed by number.\n"
-              "       --test-all: Run all tests.\n"
-              "       --test-range testidmin testidmax: Run specific tests between testidmin and testidmax, indexed by number.\n"
-              "       --exit-on-fail: Exit immediately when a test does not pass.\n");
-}
-
-static int cli_test(Context *context, int argc, char *argv[])
-{
-    if (argc < 1)
-    {
-        cli_test_help(context);
-        return EXIT_FAILURE;
-    }
-
-    TestSuiteArguments args;
-
-    CLICallbacks cbs;
-    cbs.add("help",               [context](CLIParser &parser) { cli_test_help(context); parser.end(); });
-    cbs.add("--test",             [&args](CLIParser &parser) { args.test_id_min = args.test_id_max = parser.next_uint(); args.exhaustive = false; });
-    cbs.add("--test-range",       [&args](CLIParser &parser) { args.test_id_min = parser.next_uint(); args.test_id_max = parser.next_uint(); args.exhaustive = false; });
-    cbs.add("--test-all",         [&args](CLIParser&)        { args.exhaustive = true; });
-    cbs.add("--exit-on-fail",     [&args](CLIParser&)        { args.throw_on_fail = true; });
-    cbs.add("--minimum-snr-fp16", [&args](CLIParser &parser) { args.min_snr_fp16 = parser.next_double(); });
-    cbs.add("--minimum-snr-fp32", [&args](CLIParser &parser) { args.min_snr_fp32 = parser.next_double(); });
-    cbs.add("--epsilon-fp16",     [&args](CLIParser &parser) { args.epsilon_fp16 = parser.next_double(); });
-    cbs.add("--epsilon-fp32",     [&args](CLIParser &parser) { args.epsilon_fp32 = parser.next_double(); });
-    cbs.add("--single-base-size",      [&args](CLIParser &parser) { args.single_base_size = true; });
-
-    cbs.error_handler = [context]{ cli_test_help(context); };
-    CLIParser parser(move(cbs), argc, argv);
-
-    if (!parser.parse())
-    {
-        return EXIT_FAILURE;
-    }
-    else if (parser.ended_state)
-    {
-        return EXIT_SUCCESS;
-    }
-
-    run_test_suite(context, args);
-    return EXIT_SUCCESS;
+    context->log("Usage: %s [bench | help] (args...)\n", argv[0]);
+    context->log("       For help on various subsystems, e.g. %s bench help\n", argv[0]);
 }
 
 static void cli_bench_help(Context *context)
@@ -446,11 +399,7 @@ int GLFFT::cli_main(
             return EXIT_FAILURE;
         }
 
-        if (!strcmp(argv[1], "test"))
-        {
-            return cli_test(context, argc - 2, argv + 2);
-        }
-        else if (!strcmp(argv[1], "bench"))
+        if (!strcmp(argv[1], "bench"))
         {
             return cli_bench(context, argc - 2, argv + 2);
         }
