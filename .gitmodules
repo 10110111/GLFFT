@@ -1,9 +1,9 @@
 [submodule "rapidjson"]
 	path = rapidjson
-	url = git://github.com/miloyip/rapidjson
+	url = https://github.com/miloyip/rapidjson
 [submodule "muFFT"]
 	path = muFFT
-	url = git://github.com/Themaister/muFFT
+	url = https://github.com/Themaister/muFFT
 [submodule "glslang"]
 	path = glslang
-	url = git://github.com/KhronosGroup/glslang
+	url = https://github.com/KhronosGroup/glslang
