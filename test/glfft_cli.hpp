@@ -22,15 +22,6 @@
 #include <functional>
 #include "glfft_interface.hpp"
 
-#ifdef GLFFT_CLI_ASYNC
-#include <thread>
-#include <mutex>
-#include <condition_variable>
-#include <atomic>
-#include <queue>
-#include <string>
-#endif
-
 namespace GLFFT
 {
     namespace Internal
@@ -51,55 +42,9 @@ namespace GLFFT
         void run_test_suite(Context *context, const TestSuiteArguments &args);
     }
 
-#ifdef GLFFT_CLI_ASYNC
-    // Throws this on cancellation.
-    struct AsyncCancellation { int code; };
-
-    // Glue code to fake cooperative threading which would be much nicer for this scenario ...
-    class AsyncTask
-    {
-        public:
-            AsyncTask(std::function<int ()> fun);
-
-            void start();
-            void end();
-
-            // Called from auxillary thread or similar.
-            bool pull(std::string &msg);
-            bool is_completed() { return completed; }
-            int get_exit_code() { return completed_status; }
-
-            // Only called from task thread.
-            bool is_cancelled() { return cancelled; }
-            void push_message(const char *msg);
-
-        private:
-            std::function<int ()> fun;
-            std::thread task;
-            std::mutex mut;
-            std::condition_variable cond;
-            std::atomic_bool cancelled;
-            std::atomic_bool completed;
-            int completed_status = 0;
-
-            std::queue<std::string> messages;
-            void signal_completed(int status);
-    };
-
-
-    void set_async_task(std::function<int ()> fun);
-    void end_async_task();
-    void check_async_cancel();
-    AsyncTask* get_async_task();
-    Context* get_async_context();
-#endif
-
     int cli_main(
             Context *context,
             int argc, char *argv[])
-#ifndef GLFFT_CLI_ASYNC
-        noexcept
-#endif
         ;
 }
 

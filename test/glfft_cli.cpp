@@ -386,9 +386,6 @@ static int cli_bench(Context *context, int argc, char *argv[])
 int GLFFT::cli_main(
         Context *context,
         int argc, char *argv[])
-#ifndef GLFFT_CLI_ASYNC
-    noexcept
-#endif
 {
     // Do not leak exceptions beyond this function.
     try
@@ -422,99 +419,3 @@ int GLFFT::cli_main(
 
     return EXIT_SUCCESS;
 }
-
-#ifdef GLFFT_CLI_ASYNC
-static unique_ptr<AsyncTask> current_task;
-static unique_ptr<Context> context;
-
-void GLFFT::set_async_task(std::function<int ()> fun)
-{
-    current_task = unique_ptr<AsyncTask>(new AsyncTask(move(fun)));
-}
-
-AsyncTask* GLFFT::get_async_task()
-{
-    return current_task.get();
-}
-
-Context* GLFFT::get_async_context()
-{
-    return context.get();
-}
-
-void GLFFT::end_async_task()
-{
-    if (current_task)
-        current_task->end();
-    current_task.reset();
-}
-
-void GLFFT::check_async_cancel()
-{
-    if (current_task && current_task->is_cancelled())
-        throw AsyncCancellation{0};
-}
-
-AsyncTask::AsyncTask(function<int ()> func)
-    : fun(move(func))
-{}
-
-void AsyncTask::start()
-{
-    cancelled = false;
-    completed = false;
-
-    task = thread([this] {
-        context = create_cli_context();
-        try
-        {
-            int ret = fun();
-            signal_completed(ret);
-        }
-        catch (...)
-        {
-            context->log("GLFFT task was cancelled!\n");
-            signal_completed(0);
-        }
-        context.reset();
-    });
-}
-
-bool AsyncTask::pull(string &ret)
-{
-    unique_lock<mutex> lock(mut);
-    cond.wait(lock, [this]() { return completed || !messages.empty(); });
-
-    if (!messages.empty())
-    {
-        ret = move(messages.front());
-        messages.pop();
-        return true;
-    }
-    else
-        return false;
-}
-
-void AsyncTask::signal_completed(int status)
-{
-    lock_guard<mutex> lock(mut);
-    completed_status = status;
-    completed = true;
-    cond.notify_all();
-}
-
-void AsyncTask::push_message(const char *msg)
-{
-    lock_guard<mutex> lock(mut);
-    messages.push(msg);
-    cond.notify_all();
-}
-
-void AsyncTask::end()
-{
-    cancelled = true;
-    if (task.joinable())
-        task.join();
-}
-#endif
-

@@ -29,10 +29,6 @@
 using namespace rapidjson;
 #endif
 
-#ifdef GLFFT_CLI_ASYNC
-#include "glfft_cli.hpp"
-#endif
-
 using namespace std;
 using namespace GLFFT;
 
@@ -151,12 +147,6 @@ void FFTWisdom::learn_optimal_options_exhaustive(Context *context,
                 learn_optimal_options(context, Nx >> learn_resolve, Ny, radix, horizontal_mode, SSBO, output_target, fft_type);
             }
         }
-#ifdef GLFFT_CLI_ASYNC
-        catch (const AsyncCancellation &)
-        {
-            throw;
-        }
-#endif
         catch (...)
         {
             // If our default options cannot successfully create the radix pass (i.e. throws),
@@ -191,12 +181,6 @@ void FFTWisdom::learn_optimal_options_exhaustive(Context *context,
                 learn_optimal_options(context, Nx >> learn_resolve, Ny, 2, resolve_mode, resolve_input_target, SSBO, resolve_type);
             }
         }
-#ifdef GLFFT_CLI_ASYNC
-        catch (const AsyncCancellation &)
-        {
-            throw;
-        }
-#endif
         catch (...)
         {
             // If our default options cannot successfully create the radix pass (i.e. throws),
@@ -424,12 +408,6 @@ std::pair<double, FFTOptions::Performance> FFTWisdom::study(Context *context, co
                             minimum_cost = cost;
                         }
                     }
-#ifdef GLFFT_CLI_ASYNC
-                    catch (const AsyncCancellation &)
-                    {
-                        throw;
-                    }
-#endif
                     catch (...)
                     {
                         // If we pass in bogus parameters,

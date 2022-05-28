@@ -25,10 +25,6 @@
 #include <assert.h>
 #include <cmath>
 
-#ifdef GLFFT_CLI_ASYNC
-#include "glfft_cli.hpp"
-#endif
-
 #ifndef GLFFT_SHADER_FROM_FILE
 #include "glsl/fft_common.inc"
 #include "glsl/fft_radix4.inc"
@@ -979,10 +975,6 @@ double FFT::bench(Context *context, Resource *output, Resource *input,
 
     for (unsigned i = 0; i < iterations && (((context->get_time() - start_time) < max_time) || i == 0); i++)
     {
-#ifdef GLFFT_CLI_ASYNC
-        check_async_cancel();
-#endif
-
         auto *cmd = context->request_command_buffer();
 
         double iteration_start = context->get_time();
